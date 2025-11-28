@@ -237,6 +237,13 @@ export default function ChessBoard() {
         <Text style={styles.checkText}>CHECK!</Text>
     )}
             </View>
+            {!gameOver && !showModal && (
+            <View style={styles.turnIndicator}>
+                <Text style={styles.turnText}>
+                {gameState.turn === colors.WHITE ? "White to move" : "Black to move"}
+                </Text>
+            </View>
+)}
             {!showModal && (
                 <View style={styles.buttonRow}>
                     {!gameOver && (
@@ -358,5 +365,20 @@ const styles = StyleSheet.create({
         backgroundColor: '#ff6b6b',
         borderWidth: 3,
         borderColor: '#d32f2f',
+    },
+    turnIndicator: {
+        width: BOARD_SIZE,
+        padding: 8,
+        marginVertical: 5,
+        backgroundColor: '#fff3e0',
+        borderRadius: 8,
+        alignItems: 'center',
+        borderWidth: 2,
+        borderColor: '#ff9800',
+    },
+    turnText: {
+        fontSize: 18,
+        fontWeight: 'bold',
+        color: '#e65100',
     },
 });
