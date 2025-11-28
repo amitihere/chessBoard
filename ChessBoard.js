@@ -39,15 +39,6 @@ export default function ChessBoard() {
     const [horizontal,setHorizontal] = useState(null)
     const [selectedPiece, setSelectedPiece] = useState(null);
 
-
-    const playerMoves = {
-        PAWN: 'pawn',
-        ROOK: 'rook',
-        KNIGHT: 'knight',
-        BISHOP: 'bishop',
-        QUEEN: 'queen',
-        KING: 'king',
-    }
     const movePiece = (from, toRow, toCol) => {
         const piece = board[from.row][from.col];
 
