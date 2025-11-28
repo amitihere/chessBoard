@@ -388,7 +388,6 @@ export function isInCheck(board, color) {
   if (!kingPos) return false;
   return isSquareAttacked(board, kingPos, color === colors.WHITE ? colors.BLACK : colors.WHITE);
 }
-
 export function undoLastMove() {
   if (_gameState.moveHistory.length === 0) return null;
 
@@ -397,7 +396,6 @@ export function undoLastMove() {
 
   return _gameState.board;
 }
-
 export function newGame() {
   setGameState({
     board: initializeBoard(),
@@ -409,5 +407,7 @@ export function newGame() {
       [colors.BLACK]: { kingSide: true, queenSide: true }
     }
   });
+
+
   return _gameState;
 }
