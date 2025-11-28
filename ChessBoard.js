@@ -37,8 +37,8 @@ export default function ChessBoard() {
     const [board, setBoard] = useState(initializeBoard());
     const [vertical,setVertical] = useState(null)
     const [horizontal,setHorizontal] = useState(null)
-    const [typePiece,setTypePiece] = useState(null)
-    const [playTurn, setPlayTurn] = useState(null)
+    const [selectedPiece, setSelectedPiece] = useState(null);
+
 
     const playerMoves = {
         PAWN: 'pawn',
@@ -48,7 +48,38 @@ export default function ChessBoard() {
         QUEEN: 'queen',
         KING: 'king',
     }
-    console.log(typePiece,vertical,horizontal,playTurn)
+    const movePiece = (from, toRow, toCol) => {
+        const piece = board[from.row][from.col];
+
+        board[toRow][toCol] = piece;
+        board[from.row][from.col] = {
+            type: null,
+            color: null
+        };
+        setBoard(board);
+
+    };
+const handlePieceSelect = (rowIndex, colIndex) => {
+    const piece = board[rowIndex][colIndex];
+
+    if (!selectedPiece) {
+        if (!piece ||!piece.type) return alert("Please select a piece first")
+        setSelectedPiece({
+            row: rowIndex,
+            col: colIndex,
+            type: piece.type,
+            color: piece.color
+        });
+        return;
+    }
+    if (selectedPiece.row === rowIndex && selectedPiece.col === colIndex) {
+        setSelectedPiece(null);
+        return;
+    }
+    movePiece(selectedPiece, rowIndex, colIndex);
+    setSelectedPiece(null);
+};
+    console.log(vertical,horizontal)
 
 
 
@@ -64,15 +95,17 @@ export default function ChessBoard() {
                         {row.map((piece, colIndex) => (
                             <TouchableOpacity
                                 onPress={() => {
-                                    setVertical(rowIndex)
-                                    setHorizontal(colIndex)
-                                    setTypePiece(piece.type)
-                                    setPlayTurn(piece.color)
+                                    setVertical(rowIndex);
+                                    setHorizontal(colIndex);
+                                    handlePieceSelect(rowIndex, colIndex);
                                 }}
                                 key={colIndex}
                                 style={[
                                     styles.square,
-                                    { backgroundColor: (rowIndex + colIndex) % 2 === 0 ? '#d3971dff' : '#45584aff' }
+                                    { backgroundColor: (rowIndex + colIndex) % 2 === 0 ? '#d3971dff' : '#45584aff' },
+                                    selectedPiece?.row === rowIndex && selectedPiece?.col === colIndex
+                                        ? { borderWidth: 4, borderColor: 'yellow' }
+                                        : null
                                 ]}
                             >
                                 {piece && <PieceIcon type={piece.type} color={piece.color} />}
