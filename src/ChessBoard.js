@@ -52,9 +52,11 @@ export default function ChessBoard() {
     const restart = () => {
         newGame();
         setBoard(initializeBoard());
-        setTimer({ w: timerDuration, b: timerDuration });
+        setTimer({ w: null, b: null });
+        setTimerDuration(null);
         setGameOver(false);
         setSelectedPiece(null);
+        setShowModal(true);
     };
 
     const giveUp = () => {
