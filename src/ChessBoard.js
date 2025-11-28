@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, Dimensions, TouchableOpacity, Modal } from 'react-native';
 import { ChessBishop, ChessKing, ChessKnight, ChessPawn, ChessRook, ChessQueen } from 'lucide-react-native';
-import { initializeBoard, colors, pieces, gameState, applyMove, isCheckmate, isStalemate, getLegalMoves, setGameState, newGame} from './chessLogic';
+import { initializeBoard, colors, pieces, gameState, applyMove, isCheckmate, isStalemate, getLegalMoves, setGameState, newGame, undoLastMove, getGameState} from './chessLogic';
 
 const { width } = Dimensions.get('window')
 const BOARD_SIZE = width - 20;
@@ -62,6 +62,17 @@ export default function ChessBoard() {
     const giveUp = () => {
         setGameOver(true);
         alert(`${gameState.turn === colors.WHITE ? 'White' : 'Black'} gave up! ${gameState.turn === colors.WHITE ? 'Black' : 'White'} wins!`);
+    };
+
+    const undoMove = () => {
+        const restoredBoard = undoLastMove();
+        if (restoredBoard) {
+            const restoredState = getGameState();
+            setBoard(restoredBoard);
+            setGameState(restoredState);
+            setSelectedPiece(null);
+            setGameOver(false);
+        }
     };
 
     useEffect(() => {
@@ -200,9 +211,14 @@ export default function ChessBoard() {
             {!showModal && (
                 <View style={styles.buttonRow}>
                     {!gameOver && (
-                        <TouchableOpacity style={[styles.btn, styles.giveUpBtn, { marginHorizontal: 5 }]} onPress={giveUp}>
-                            <Text style={styles.btnText}>Give Up</Text>
-                        </TouchableOpacity>
+                        <>
+                            <TouchableOpacity style={[styles.btn, styles.undoBtn, { marginHorizontal: 5 }]} onPress={undoMove}>
+                                <Text style={styles.btnText}>Undo</Text>
+                            </TouchableOpacity>
+                            <TouchableOpacity style={[styles.btn, styles.giveUpBtn, { marginHorizontal: 5 }]} onPress={giveUp}>
+                                <Text style={styles.btnText}>Give Up</Text>
+                            </TouchableOpacity>
+                        </>
                     )}
                     {gameOver && (
                         <TouchableOpacity style={[styles.btn, { marginHorizontal: 5 }]} onPress={restart}>
@@ -267,7 +283,8 @@ const styles = StyleSheet.create({
         padding: 15,
         borderRadius: 10,
         marginVertical: 5,
-        width: width * 0.6,
+        flex: 1,
+        maxWidth: width * 0.4,
         alignItems: 'center',
     },
     btnText: {
@@ -283,5 +300,8 @@ const styles = StyleSheet.create({
     },
     giveUpBtn: {
         backgroundColor: '#f44336',
+    },
+    undoBtn: {
+        backgroundColor: '#2196F3',
     },
 });
