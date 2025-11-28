@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, Dimensions, TouchableOpacity, Modal } from 'react-native';
 import { ChessBishop, ChessKing, ChessKnight, ChessPawn, ChessRook, ChessQueen } from 'lucide-react-native';
-import { initializeBoard, colors, pieces, gameState, applyMove, isCheckmate, isStalemate, getLegalMoves, setGameState } from './chessLogic';
+import { initializeBoard, colors, pieces, gameState, applyMove, isCheckmate, isStalemate, getLegalMoves, setGameState, newGame} from './chessLogic';
 
 const { width } = Dimensions.get('window')
 const BOARD_SIZE = width - 20;
@@ -44,9 +44,23 @@ export default function ChessBoard() {
     const [horizontal, setHorizontal] = useState(null)
     const [selectedPiece, setSelectedPiece] = useState(null);
     const [timer, setTimer] = useState({ w: null, b: null });
+    const [timerDuration, setTimerDuration] = useState(null);
     const [showModal, setShowModal] = useState(true);
     const [gameOver, setGameOver] = useState(false);
     const ref = useRef(null);
+
+    const restart = () => {
+        newGame();
+        setBoard(initializeBoard());
+        setTimer({ w: timerDuration, b: timerDuration });
+        setGameOver(false);
+        setSelectedPiece(null);
+    };
+
+    const giveUp = () => {
+        setGameOver(true);
+        alert(`${gameState.turn === colors.WHITE ? 'White' : 'Black'} gave up! ${gameState.turn === colors.WHITE ? 'Black' : 'White'} wins!`);
+    };
 
     useEffect(() => {
         if (!timer.w || gameOver || showModal) {
@@ -138,7 +152,9 @@ export default function ChessBoard() {
                     <View style={styles.modalContent}>
                         {[2, 5, 10].map(m => (
                             <TouchableOpacity key={m} style={styles.btn} onPress={() => {
-                                setTimer({ w: m*60, b: m*60 });
+                                const d = m*60;
+                                setTimer({ w: d, b: d });
+                                setTimerDuration(d);
                                 setShowModal(false);
                             }}>
                                 <Text style={styles.btnText}>{m} Min</Text>
@@ -179,6 +195,20 @@ export default function ChessBoard() {
             <View style={[styles.timer, gameState.turn === colors.WHITE && !gameOver && styles.activeTimer]}>
                 <Text style={styles.timerText}>{timer.w ? formatTime(timer.w) : '--:--'}</Text>
             </View>
+            {!showModal && (
+                <View style={styles.buttonRow}>
+                    {!gameOver && (
+                        <TouchableOpacity style={[styles.btn, styles.giveUpBtn, { marginHorizontal: 5 }]} onPress={giveUp}>
+                            <Text style={styles.btnText}>Give Up</Text>
+                        </TouchableOpacity>
+                    )}
+                    {gameOver && (
+                        <TouchableOpacity style={[styles.btn, { marginHorizontal: 5 }]} onPress={restart}>
+                            <Text style={styles.btnText}>Restart</Text>
+                        </TouchableOpacity>
+                    )}
+                </View>
+            )}
         </View>
     );
 }
@@ -242,5 +272,14 @@ const styles = StyleSheet.create({
         color: 'white',
         fontSize: 18,
         fontWeight: 'bold',
+    },
+    buttonRow: {
+        flexDirection: 'row',
+        justifyContent: 'center',
+        marginTop: 10,
+        width: BOARD_SIZE,
+    },
+    giveUpBtn: {
+        backgroundColor: '#f44336',
     },
 });
