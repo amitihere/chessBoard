@@ -7,6 +7,8 @@ const { width } = Dimensions.get('window')
 const BOARD_SIZE = width - 20;
 const SQUARE_SIZE = BOARD_SIZE / 8;
 
+
+
 const PieceIcon = ({ type, color }) => {
     const props = { size: SQUARE_SIZE * 0.8, color: color === colors.WHITE ? 'white' : 'black' };
     switch (type) {
@@ -51,6 +53,7 @@ export default function ChessBoard() {
         setBoard(board);
 
     };
+    
     const handlePieceSelect = (rowIndex, colIndex) => {
         const piece = board[rowIndex][colIndex];
 
