@@ -200,6 +200,15 @@ export default function ChessBoard() {
                                 ]}
                             >
                                 {piece && <PieceIcon type={piece.type} color={piece.color} />}
+                                {selectedPiece && selectedPiece.legalMoves.some(
+                                    (m) => m.to.row === rowIndex && m.to.col === colIndex
+                                ) && (
+                                <View style={[
+                                    styles.legalMoveIndicator,
+                                    piece ? styles.captureIndicator : styles.moveIndicator
+                                    ]} />
+                                )}
+
                             </TouchableOpacity>
                         ))}
                     </View>
@@ -302,5 +311,21 @@ const styles = StyleSheet.create({
     },
     undoBtn: {
         backgroundColor: '#2196F3',
+    },
+    legalMoveIndicator: {
+        position: 'absolute',
+        borderRadius: 50,
+    },
+    moveIndicator: {
+        width: SQUARE_SIZE * 0.3,
+        height: SQUARE_SIZE * 0.3,
+        backgroundColor: 'rgba(0, 255, 0, 0.5)',
+    },
+    captureIndicator: {
+        width: SQUARE_SIZE * 0.9,
+        height: SQUARE_SIZE * 0.9,
+        borderWidth: 4,
+        borderColor: 'rgba(255, 0, 0, 0.6)',
+        backgroundColor: 'transparent',
     },
 });
