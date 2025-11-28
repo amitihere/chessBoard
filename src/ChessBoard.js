@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, Dimensions, TouchableOpacity } from 'react-native';
 import { ChessBishop, ChessKing, ChessKnight, ChessPawn, ChessRook, ChessQueen } from 'lucide-react-native';
-import { initializeBoard, colors, pieces } from './chessLogic';
+import { initializeBoard, colors, pieces, gameState, applyMove, isCheckmate, isStalemate, getLegalMoves, setGameState } from './chessLogic';
 
 const { width } = Dimensions.get('window')
 const BOARD_SIZE = width - 20;
@@ -34,6 +34,7 @@ const PieceIcon = ({ type, color }) => {
 
 
 export default function ChessBoard() {
+    console.log('DEBUG: gameState in ChessBoard:', gameState);
     const [board, setBoard] = useState(initializeBoard());
     const [vertical, setVertical] = useState(null)
     const [horizontal, setHorizontal] = useState(null)
@@ -54,23 +55,50 @@ export default function ChessBoard() {
         const piece = board[rowIndex][colIndex];
 
         if (!selectedPiece) {
-            if (!piece || !piece.type) return alert("Please select a piece first")
-            setSelectedPiece({
-                row: rowIndex,
-                col: colIndex,
-                type: piece.type,
-                color: piece.color
-            });
+            if (!piece || piece.color !== gameState.turn) return;
+            const moves = getLegalMoves(board, { row: rowIndex, col: colIndex });
+            if (moves.length > 0) {
+                setSelectedPiece({ row: rowIndex, col: colIndex, legalMoves: moves });
+            }
             return;
         }
+
         if (selectedPiece.row === rowIndex && selectedPiece.col === colIndex) {
             setSelectedPiece(null);
             return;
         }
-        movePiece(selectedPiece, rowIndex, colIndex);
+
+        const move = selectedPiece.legalMoves.find(
+            m => m.to.row === rowIndex && m.to.col === colIndex
+        );
+
+        if (!move) {
+            if (piece && piece.color === gameState.turn) {
+                const moves = getLegalMoves(board, { row: rowIndex, col: colIndex });
+                if (moves.length > 0) {
+                    setSelectedPiece({ row: rowIndex, col: colIndex, legalMoves: moves });
+                } else {
+                    setSelectedPiece(null);
+                }
+            } else {
+                setSelectedPiece(null);
+            }
+            return;
+        }
+
+        const newState = applyMove(board, move);
+        setBoard(newState.board);
+
+        setGameState(newState);
+
+        if (isCheckmate(newState.board, newState.turn)) {
+            alert(`Checkmate! ${newState.turn === colors.WHITE ? 'Black' : 'White'} wins!`);
+        } else if (isStalemate(newState.board, newState.turn)) {
+            alert("Stalemate! The game is a draw.");
+        }
+
         setSelectedPiece(null);
     };
-    console.log(vertical, horizontal)
 
 
 
