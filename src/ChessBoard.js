@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, Dimensions, TouchableOpacity, Modal } from 'react-native';
 import { ChessBishop, ChessKing, ChessKnight, ChessPawn, ChessRook, ChessQueen } from 'lucide-react-native';
-import { initializeBoard, colors, pieces, gameState, applyMove, isCheckmate, isStalemate, getLegalMoves, setGameState, newGame, undoLastMove, getGameState} from './chessLogic';
+import { initializeBoard, colors, pieces, gameState, applyMove, isCheckmate, isStalemate, getLegalMoves, setGameState, newGame, undoLastMove, getGameState, isInCheck} from './chessLogic';
 
 const { width } = Dimensions.get('window')
 const BOARD_SIZE = width - 20;
@@ -47,7 +47,12 @@ export default function ChessBoard() {
     const [timerDuration, setTimerDuration] = useState(null);
     const [showModal, setShowModal] = useState(true);
     const [gameOver, setGameOver] = useState(false);
+    const [inCheck, setInCheck] = useState(false);
     const ref = useRef(null);
+
+    useEffect(() => {
+        setInCheck(isInCheck(board, gameState.turn));
+    }, [board, gameState.turn]);
 
     const restart = () => {
         newGame();
@@ -57,6 +62,7 @@ export default function ChessBoard() {
         setGameOver(false);
         setSelectedPiece(null);
         setShowModal(true);
+        setInCheck(false);
     };
 
     const giveUp = () => {
@@ -72,6 +78,7 @@ export default function ChessBoard() {
             setGameState(restoredState);
             setSelectedPiece(null);
             setGameOver(false);
+            setInCheck(isInCheck(restoredBoard, restoredState.turn));
         }
     };
 
@@ -155,6 +162,10 @@ export default function ChessBoard() {
         }
         setSelectedPiece(null);
     };
+    const isKingInCheck = (rowIndex, colIndex) => {
+        const piece = board[rowIndex][colIndex];
+        return piece && piece.type === pieces.KING && piece.color === gameState.turn && inCheck;
+    };
 
 
 
@@ -178,6 +189,9 @@ export default function ChessBoard() {
             </Modal>
             <View style={[styles.timer, gameState.turn === colors.BLACK && !gameOver && styles.activeTimer]}>
                 <Text style={styles.timerText}>{timer.b ? formatTime(timer.b) : '--:--'}</Text>
+                {inCheck && gameState.turn === colors.BLACK&& !gameOver && (
+        <Text style={styles.checkText}>CHECK!</Text>
+    )}
             </View>
             <View style={styles.board}>
                 {board.map((row, rowIndex) => (
@@ -196,6 +210,9 @@ export default function ChessBoard() {
                                     { backgroundColor: (rowIndex + colIndex) % 2 === 0 ? '#d3971dff' : '#45584aff' },
                                     selectedPiece?.row === rowIndex && selectedPiece?.col === colIndex
                                         ? { borderWidth: 4, borderColor: 'yellow' }
+                                        : null,
+                                    isKingInCheck(rowIndex, colIndex)
+                                        ? styles.checkSquare
                                         : null
                                 ]}
                             >
@@ -216,6 +233,9 @@ export default function ChessBoard() {
             </View>
             <View style={[styles.timer, gameState.turn === colors.WHITE && !gameOver && styles.activeTimer]}>
                 <Text style={styles.timerText}>{timer.w ? formatTime(timer.w) : '--:--'}</Text>
+                {inCheck && gameState.turn === colors.WHITE && !gameOver && (
+        <Text style={styles.checkText}>CHECK!</Text>
+    )}
             </View>
             {!showModal && (
                 <View style={styles.buttonRow}>
@@ -327,5 +347,16 @@ const styles = StyleSheet.create({
         borderWidth: 4,
         borderColor: 'rgba(255, 0, 0, 0.6)',
         backgroundColor: 'transparent',
+    },
+    checkText: {
+        fontSize: 20,
+        fontWeight: 'bold',
+        color: '#f44336',
+        marginTop: 5,
+    },
+    checkSquare: {
+        backgroundColor: '#ff6b6b',
+        borderWidth: 3,
+        borderColor: '#d32f2f',
     },
 });
