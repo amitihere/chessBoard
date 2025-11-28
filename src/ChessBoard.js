@@ -215,13 +215,13 @@ export default function ChessBoard() {
                             <TouchableOpacity style={[styles.btn, styles.undoBtn, { marginHorizontal: 5 }]} onPress={undoMove}>
                                 <Text style={styles.btnText}>Undo</Text>
                             </TouchableOpacity>
-                            <TouchableOpacity style={[styles.btn, styles.giveUpBtn, { marginHorizontal: 5 }]} onPress={giveUp}>
+                            <TouchableOpacity style={[styles.btn,styles.giveUpBtn, { marginHorizontal: 5 }]} onPress={giveUp}>
                                 <Text style={styles.btnText}>Give Up</Text>
                             </TouchableOpacity>
                         </>
                     )}
                     {gameOver && (
-                        <TouchableOpacity style={[styles.btn, { marginHorizontal: 5 }]} onPress={restart}>
+                        <TouchableOpacity style={[styles.btn,  { marginHorizontal: 5 }]} onPress={restart}>
                             <Text style={styles.btnText}>Restart</Text>
                         </TouchableOpacity>
                     )}
@@ -283,8 +283,7 @@ const styles = StyleSheet.create({
         padding: 15,
         borderRadius: 10,
         marginVertical: 5,
-        flex: 1,
-        maxWidth: width * 0.4,
+        maxWidth: width * 0.6,
         alignItems: 'center',
     },
     btnText: {
