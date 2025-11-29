@@ -1,6 +1,57 @@
 export const colors = { WHITE: 'white', BLACK: 'black' };
 export const pieces = { PAWN: 'pawn', ROOK: 'rook', KNIGHT: 'knight', BISHOP: 'bishop', QUEEN: 'queen', KING: 'king' };
 
+export let gameState = {
+    turn: colors.WHITE,
+    history: [],
+  };
+  
+  export const getGameState = () => {
+    return { ...gameState };
+  };
+  
+  export const setGameState = (newState) => {
+    gameState = { ...gameState, ...newState };
+  };
+  
+  export const newGame = () => {
+    gameState = {
+      turn: colors.WHITE,
+      history: [],
+    };
+  };
+
+  export const applyMove = (board, move) => {
+    const newBoard = JSON.parse(JSON.stringify(board)); // Deep copy
+    const piece = newBoard[move.from.row][move.from.col];
+  
+    // Store previous state for undo
+    gameState.history.push({
+      board: JSON.parse(JSON.stringify(board)),
+      gameState: JSON.parse(JSON.stringify(gameState)),
+    });
+  
+    // Move piece
+    newBoard[move.to.row][move.to.col] = piece;
+    newBoard[move.from.row][move.from.col] = null;
+  
+    // Switch turn
+    const newTurn = gameState.turn === colors.WHITE ? colors.BLACK : colors.WHITE;
+    setGameState({ turn: newTurn, board: newBoard });
+  
+    return { board: newBoard, turn: newTurn };
+  };
+
+  export const undoLastMove = () => {
+    if (gameState.history.length === 0) return null;
+  
+    const lastState = gameState.history.pop();
+    const { board, gameState: prevGameState } = lastState;
+  
+    setGameState(prevGameState);
+  
+    return board;
+  };
 
 export const initializeBoard = () => {
   const board = [];
@@ -220,3 +271,19 @@ export const isCheckmate = (board, color) => {
   }
   return true;
 };
+
+export const isStalemate = (board, color) => {
+    if (isInCheck(board, color)) return false;
+  
+    for (let r = 0; r < 8; r++) {
+      for (let c = 0; c < 8; c++) {
+        const p = board[r][c];
+        if (p && p.color === color) {
+          const moves = getLegalMoves(board, { row: r, col: c });
+          if (moves.length > 0) return false;
+        }
+      }
+    }
+  
+    return true;
+  };
