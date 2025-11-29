@@ -1,32 +1,47 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, Dimensions, TouchableOpacity, Modal } from 'react-native';
 import { ChessBishop, ChessKing, ChessKnight, ChessPawn, ChessRook, ChessQueen } from 'lucide-react-native';
-import { initializeBoard, colors, pieces, isCheckmate, getLegalMoves, isInCheck } from './chessLogic';
+import { initializeBoard, colors, pieces, gameState, applyMove, isCheckmate, isStalemate, getLegalMoves, setGameState, newGame, undoLastMove, getGameState, isInCheck} from './chessLogic';
 
 const { width } = Dimensions.get('window')
 const BOARD_SIZE = width - 20;
 const SQUARE_SIZE = BOARD_SIZE / 8;
 
-const formatTime = (s) => `${Math.floor(s / 60)}:${(s % 60).toString().padStart(2, '0')}`;
+const formatTime = (s) => `${Math.floor(s/60)}:${(s%60).toString().padStart(2,'0')}`;
+
+
 
 const PieceIcon = ({ type, color }) => {
     const props = { size: SQUARE_SIZE * 0.8, color: color === colors.WHITE ? 'white' : 'black' };
     switch (type) {
-        case pieces.PAWN: return <ChessPawn {...props} />
-        case pieces.ROOK: return <ChessRook {...props} />
-        case pieces.KNIGHT: return <ChessKnight {...props} />
-        case pieces.BISHOP: return <ChessBishop {...props} />
-        case pieces.QUEEN: return <ChessQueen {...props} />
-        case pieces.KING: return <ChessKing {...props} />
-        default: return null;
+        case pieces.PAWN:
+            return <ChessPawn {...props} />
+
+        case pieces.ROOK:
+            return <ChessRook {...props} />
+
+        case pieces.KNIGHT:
+            return <ChessKnight {...props} />
+
+        case pieces.BISHOP:
+            return <ChessBishop {...props} />
+
+        case pieces.QUEEN:
+            return <ChessQueen {...props} />
+
+        case pieces.KING:
+            return <ChessKing {...props} />
+        default:
+            return null;
     }
 };
 
-export default function ChessBoard() {
-    const [board, setBoard] = useState(initializeBoard());
-    const [turn, setTurn] = useState(colors.WHITE);
-    const [moveHistory, setMoveHistory] = useState([]);
 
+export default function ChessBoard() {
+    console.log('DEBUG: gameState in ChessBoard:', gameState);
+    const [board, setBoard] = useState(initializeBoard());
+    const [vertical, setVertical] = useState(null)
+    const [horizontal, setHorizontal] = useState(null)
     const [selectedPiece, setSelectedPiece] = useState(null);
     const [timer, setTimer] = useState({ w: null, b: null });
     const [timerDuration, setTimerDuration] = useState(null);
@@ -35,13 +50,12 @@ export default function ChessBoard() {
     const [inCheck, setInCheck] = useState(false);
 
     useEffect(() => {
-        setInCheck(isInCheck(board, turn));
-    }, [board, turn]);
+        setInCheck(isInCheck(board, gameState.turn));
+    }, [board, gameState.turn]);
 
     const restart = () => {
+        newGame();
         setBoard(initializeBoard());
-        setTurn(colors.WHITE);
-        setMoveHistory([]);
         setTimer({ w: null, b: null });
         setTimerDuration(null);
         setGameOver(false);
@@ -52,25 +66,25 @@ export default function ChessBoard() {
 
     const giveUp = () => {
         setGameOver(true);
-        alert(`${turn === colors.WHITE ? 'White' : 'Black'} gave up! ${turn === colors.WHITE ? 'Black' : 'White'} wins!`);
+        alert(`${gameState.turn === colors.WHITE ? 'White' : 'Black'} gave up! ${gameState.turn === colors.WHITE ? 'Black' : 'White'} wins!`);
     };
 
     const undoMove = () => {
-        if (moveHistory.length === 0) return;
-
-        const lastMove = moveHistory[moveHistory.length - 1];
-        const previousBoard = lastMove.boardSnapshot;
-        setBoard(previousBoard);
-        setTurn(lastMove.turn);
-        setMoveHistory(prev => prev.slice(0, -1));
-        setSelectedPiece(null);
-        setGameOver(false);
+        const restoredBoard = undoLastMove();
+        if (restoredBoard) {
+            const restoredState = getGameState();
+            setBoard(restoredBoard);
+            setGameState(restoredState);
+            setSelectedPiece(null);
+            setGameOver(false);
+            setInCheck(isInCheck(restoredBoard, restoredState.turn));
+        }
     };
 
     useEffect(() => {
-        if (!timer.w || gameOver || showModal) return
+        if (!timer.w || gameOver || showModal) return 
         const interval = setInterval(() => {
-            const k = turn === colors.WHITE ? 'w' : 'b';
+            const k = gameState.turn === colors.WHITE ? 'w' : 'b';
             setTimer(p => {
                 const t = p[k] - 1;
                 if (t <= 0) {
@@ -82,14 +96,25 @@ export default function ChessBoard() {
             });
         }, 1000);
         return () => clearInterval(interval);
-    }, [turn, timer.w, gameOver, showModal]);
+    }, [gameState.turn, timer.w, gameOver, showModal]);
 
+    const movePiece = (from, toRow, toCol) => {
+        const piece = board[from.row][from.col];
+
+        board[toRow][toCol] = piece;
+        board[from.row][from.col] = {
+            type: null,
+            color: null
+        };
+        setBoard(board);
+
+    };
+    
     const handlePieceSelect = (rowIndex, colIndex) => {
         const piece = board[rowIndex][colIndex];
 
-        // If selecting a piece to move
         if (!selectedPiece) {
-            if (!piece || piece.color !== turn) return;
+            if (!piece || piece.color !== gameState.turn) return;
             const moves = getLegalMoves(board, { row: rowIndex, col: colIndex });
             if (moves.length > 0) {
                 setSelectedPiece({ row: rowIndex, col: colIndex, legalMoves: moves });
@@ -97,20 +122,17 @@ export default function ChessBoard() {
             return;
         }
 
-        // If clicking on the same piece, deselect
         if (selectedPiece.row === rowIndex && selectedPiece.col === colIndex) {
             setSelectedPiece(null);
             return;
         }
 
-        // Check if the click is a valid move
         const move = selectedPiece.legalMoves.find(
             m => m.to.row === rowIndex && m.to.col === colIndex
         );
 
         if (!move) {
-            // If clicked on another own piece, select that instead
-            if (piece && piece.color === turn) {
+            if (piece && piece.color === gameState.turn) {
                 const moves = getLegalMoves(board, { row: rowIndex, col: colIndex });
                 if (moves.length > 0) {
                     setSelectedPiece({ row: rowIndex, col: colIndex, legalMoves: moves });
@@ -124,34 +146,24 @@ export default function ChessBoard() {
         }
 
         if (gameOver) return;
-
-        // Apply Move
-        const newBoard = JSON.parse(JSON.stringify(board)); // Deep copy
-        newBoard[move.to.row][move.to.col] = newBoard[move.from.row][move.from.col];
-        newBoard[move.from.row][move.from.col] = null;
-
-        // Save history
-        setMoveHistory(prev => [...prev, {
-            boardSnapshot: board, // Save current board before change
-            turn: turn
-        }]);
-
-        setBoard(newBoard);
-        const nextTurn = turn === colors.WHITE ? colors.BLACK : colors.WHITE;
-        setTurn(nextTurn);
-
-        if (isCheckmate(newBoard, nextTurn)) {
+        const newState = applyMove(board, move);
+        setBoard(newState.board);
+        setGameState(newState);
+        if (isCheckmate(newState.board, newState.turn)) {
             setGameOver(true);
-            alert(`Checkmate! ${nextTurn === colors.WHITE ? 'Black' : 'White'} wins!`);
+            alert(`Checkmate! ${newState.turn === colors.WHITE ? 'Black' : 'White'} wins!`);
+        } else if (isStalemate(newState.board, newState.turn)) {
+            setGameOver(true);
+            alert("Stalemate! The game is a draw.");
         }
-
         setSelectedPiece(null);
     };
-
     const isKingInCheck = (rowIndex, colIndex) => {
         const piece = board[rowIndex][colIndex];
-        return piece && piece.type === pieces.KING && piece.color === turn && inCheck;
+        return piece && piece.type === pieces.KING && piece.color === gameState.turn && inCheck;
     };
+
+
 
     return (
         <View style={styles.container}>
@@ -160,7 +172,7 @@ export default function ChessBoard() {
                     <View style={styles.modalContent}>
                         {[2, 5, 10].map(m => (
                             <TouchableOpacity key={m} style={styles.btn} onPress={() => {
-                                const d = m * 60;
+                                const d = m*60;
                                 setTimer({ w: d, b: d });
                                 setTimerDuration(d);
                                 setShowModal(false);
@@ -171,11 +183,11 @@ export default function ChessBoard() {
                     </View>
                 </View>
             </Modal>
-            <View style={[styles.timer, turn === colors.BLACK && !gameOver && styles.activeTimer]}>
+            <View style={[styles.timer, gameState.turn === colors.BLACK && !gameOver && styles.activeTimer]}>
                 <Text style={styles.timerText}>{timer.b ? formatTime(timer.b) : '--:--'}</Text>
-                {inCheck && turn === colors.BLACK && !gameOver && (
-                    <Text style={styles.checkText}>CHECK!</Text>
-                )}
+                {inCheck && gameState.turn === colors.BLACK&& !gameOver && (
+        <Text style={styles.checkText}>CHECK!</Text>
+    )}
             </View>
             <View style={styles.board}>
                 {board.map((row, rowIndex) => (
@@ -184,6 +196,8 @@ export default function ChessBoard() {
                             <TouchableOpacity
                                 onPress={() => {
                                     if (gameOver) return;
+                                    setVertical(rowIndex);
+                                    setHorizontal(colIndex);
                                     handlePieceSelect(rowIndex, colIndex);
                                 }}
                                 key={colIndex}
@@ -202,30 +216,30 @@ export default function ChessBoard() {
                                 {selectedPiece && selectedPiece.legalMoves.some(
                                     (m) => m.to.row === rowIndex && m.to.col === colIndex
                                 ) && (
-                                        <View style={[
-                                            styles.legalMoveIndicator,
-                                            piece ? styles.captureIndicator : styles.moveIndicator
-                                        ]} />
-                                    )}
+                                <View style={[
+                                    styles.legalMoveIndicator,
+                                    piece ? styles.captureIndicator : styles.moveIndicator
+                                    ]} />
+                                )}
 
                             </TouchableOpacity>
                         ))}
                     </View>
                 ))}
             </View>
-            <View style={[styles.timer, turn === colors.WHITE && !gameOver && styles.activeTimer]}>
+            <View style={[styles.timer, gameState.turn === colors.WHITE && !gameOver && styles.activeTimer]}>
                 <Text style={styles.timerText}>{timer.w ? formatTime(timer.w) : '--:--'}</Text>
-                {inCheck && turn === colors.WHITE && !gameOver && (
-                    <Text style={styles.checkText}>CHECK!</Text>
-                )}
+                {inCheck && gameState.turn === colors.WHITE && !gameOver && (
+        <Text style={styles.checkText}>CHECK!</Text>
+    )}
             </View>
             {!gameOver && !showModal && (
-                <View style={styles.turnIndicator}>
-                    <Text style={styles.turnText}>
-                        {turn === colors.WHITE ? "White to move" : "Black to move"}
-                    </Text>
-                </View>
-            )}
+            <View style={styles.turnIndicator}>
+                <Text style={styles.turnText}>
+                {gameState.turn === colors.WHITE ? "White to move" : "Black to move"}
+                </Text>
+            </View>
+)}
             {!showModal && (
                 <View style={styles.buttonRow}>
                     {!gameOver && (
@@ -233,13 +247,13 @@ export default function ChessBoard() {
                             <TouchableOpacity style={[styles.btn, styles.undoBtn, { marginHorizontal: 5 }]} onPress={undoMove}>
                                 <Text style={styles.btnText}>Undo</Text>
                             </TouchableOpacity>
-                            <TouchableOpacity style={[styles.btn, styles.giveUpBtn, { marginHorizontal: 5 }]} onPress={giveUp}>
+                            <TouchableOpacity style={[styles.btn,styles.giveUpBtn, { marginHorizontal: 5 }]} onPress={giveUp}>
                                 <Text style={styles.btnText}>Give Up</Text>
                             </TouchableOpacity>
                         </>
                     )}
                     {gameOver && (
-                        <TouchableOpacity style={[styles.btn, { marginHorizontal: 5 }]} onPress={restart}>
+                        <TouchableOpacity style={[styles.btn,  { marginHorizontal: 5 }]} onPress={restart}>
                             <Text style={styles.btnText}>Restart</Text>
                         </TouchableOpacity>
                     )}
@@ -250,12 +264,6 @@ export default function ChessBoard() {
 }
 
 const styles = StyleSheet.create({
-    container: {
-        flex: 1,
-        backgroundColor: '#fff',
-        alignItems: 'center',
-        justifyContent: 'center',
-    },
     square: {
         flex: 1,
         alignItems: 'center',
