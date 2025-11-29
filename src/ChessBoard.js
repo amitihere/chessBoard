@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, Dimensions, TouchableOpacity, Modal } from 'react-native';
 import { ChessBishop, ChessKing, ChessKnight, ChessPawn, ChessRook, ChessQueen } from 'lucide-react-native';
 import { initializeBoard, colors, pieces, gameState, applyMove, isCheckmate, isStalemate, getLegalMoves, setGameState, newGame, undoLastMove, getGameState, isInCheck} from './chessLogic';
@@ -48,7 +48,6 @@ export default function ChessBoard() {
     const [showModal, setShowModal] = useState(true);
     const [gameOver, setGameOver] = useState(false);
     const [inCheck, setInCheck] = useState(false);
-    const ref = useRef(null);
 
     useEffect(() => {
         setInCheck(isInCheck(board, gameState.turn));
@@ -83,11 +82,8 @@ export default function ChessBoard() {
     };
 
     useEffect(() => {
-        if (!timer.w || gameOver || showModal) {
-            if (ref.current) clearInterval(ref.current);
-            return;
-        }
-        ref.current = setInterval(() => {
+        if (!timer.w || gameOver || showModal) return 
+        const interval = setInterval(() => {
             const k = gameState.turn === colors.WHITE ? 'w' : 'b';
             setTimer(p => {
                 const t = p[k] - 1;
@@ -99,7 +95,7 @@ export default function ChessBoard() {
                 return { ...p, [k]: t };
             });
         }, 1000);
-        return () => { if (ref.current) clearInterval(ref.current); };
+        return () => clearInterval(interval);
     }, [gameState.turn, timer.w, gameOver, showModal]);
 
     const movePiece = (from, toRow, toCol) => {

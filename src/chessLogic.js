@@ -33,7 +33,7 @@ function isSquareAttacked(board, { row, col }, byColor) {
   const dirs = [[1, 0], [-1, 0], [0, 1], [0, -1], [1, 1], [1, -1], [-1, 1], [-1, -1]];
   if (dirs.some(([dr, dc]) => getPiece(board, row + dr, col + dc)?.type === pieces.KING && getPiece(board, row + dr, col + dc)?.color === byColor)) return true;
 
-  return dirs.some(([dr, dc], i) => {
+  return dirs.some(([dr, dc], i) => {;
     const types = i < 4 ? [pieces.ROOK, pieces.QUEEN] : [pieces.BISHOP, pieces.QUEEN];
     for (let k = 1; k < 8; k++) {
       const p = getPiece(board, row + dr * k, col + dc * k);
